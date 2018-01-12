@@ -15,4 +15,7 @@
 			#{age}
 		)
 	</insert>
+	<select id ="queryUserById" parameterType="java.lang.Integer" resultType="com.sonic.dao.entity.UserDetailEntity">
+		select * from userDetail_$[index]$ where id=#{id}
+	</select>
 </mapper>

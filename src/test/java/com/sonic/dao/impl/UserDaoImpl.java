@@ -13,4 +13,9 @@ public class UserDaoImpl extends SqlSessionDaoSupport implements UserDao {
 		return getSqlSession().insert("user.insertUser", user) > 0;
 	}
 
+	@Override
+	public UserEntity getUserById(Integer id) {
+		return (UserEntity) getSqlSession().selectOne("user.queryUserById", id);
+	}
+
 }

@@ -16,53 +16,22 @@
 
 package com.sonic.spring;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
-import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.factory.BeanFactory;
-import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
-import org.springframework.transaction.interceptor.TransactionAttribute;
 import org.springframework.transaction.interceptor.TransactionAttributeSource;
-import org.springframework.transaction.interceptor.TransactionProxyFactoryBean;
-import org.springframework.transaction.support.CallbackPreferringPlatformTransactionManager;
-import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.interceptor.TransactionInterceptor;
 
-import com.sonic.base.DbRouterImpl;
-import com.sonic.common.DbRouter;
 import com.sonic.common.ShardUtils;
 
 /**
- * AOP Alliance MethodInterceptor for declarative transaction
- * management using the common Spring transaction infrastructure
- * ({@link org.springframework.transaction.PlatformTransactionManager}).
+ * 
+ * @author shiweilu
  *
- * <p>Derives from the {@link TransactionAspectSupport} class which
- * contains the integration with Spring's underlying transaction API.
- * TransactionInterceptor simply calls the relevant superclass methods
- * such as {@link #createTransactionIfNecessary} in the correct order.
- *
- * <p>TransactionInterceptors are thread-safe.
- *
- * @author Rod Johnson
- * @author Juergen Hoeller
- * @see TransactionProxyFactoryBean
- * @see org.springframework.aop.framework.ProxyFactoryBean
- * @see org.springframework.aop.framework.ProxyFactory
  */
 @SuppressWarnings("serial")
-public class ExtTransactionInterceptor extends TransactionAspectSupport implements MethodInterceptor, Serializable {
+public class ExtTransactionInterceptor extends TransactionInterceptor {
 
 	/**
 	 * Create a new TransactionInterceptor.
@@ -72,6 +41,7 @@ public class ExtTransactionInterceptor extends TransactionAspectSupport implemen
 	 * @see #setTransactionAttributeSource(TransactionAttributeSource)
 	 */
 	public ExtTransactionInterceptor() {
+		super();
 	}
 
 	/**
@@ -82,8 +52,7 @@ public class ExtTransactionInterceptor extends TransactionAspectSupport implemen
 	 * @see #setTransactionAttributes(java.util.Properties)
 	 */
 	public ExtTransactionInterceptor(PlatformTransactionManager ptm, Properties attributes) {
-		setTransactionManager(ptm);
-		setTransactionAttributes(attributes);
+		super(ptm, attributes);
 	}
 
 	/**
@@ -94,8 +63,7 @@ public class ExtTransactionInterceptor extends TransactionAspectSupport implemen
 	 * @see #setTransactionAttributeSource(TransactionAttributeSource)
 	 */
 	public ExtTransactionInterceptor(PlatformTransactionManager ptm, TransactionAttributeSource tas) {
-		setTransactionManager(ptm);
-		setTransactionAttributeSource(tas);
+		super(ptm, tas);
 	}
 
 
@@ -103,146 +71,15 @@ public class ExtTransactionInterceptor extends TransactionAspectSupport implemen
 		// Work out the target class: may be <code>null</code>.
 		// The TransactionAttributeSource should be passed the target class
 		// as well as the method, which may be from an interface.
-		ShardUtils.compute(invocation);
-		Class<?> targetClass = (invocation.getThis() != null ? AopUtils.getTargetClass(invocation.getThis()) : null);
-
-		// If the transaction attribute is null, the method is non-transactional.
-		final TransactionAttribute txAttr =
-				getTransactionAttributeSource().getTransactionAttribute(invocation.getMethod(), targetClass);
-		final PlatformTransactionManager tm = determineTransactionManager(txAttr);
-		final String joinpointIdentification = methodIdentification(invocation.getMethod(), targetClass);
-
-		if (txAttr == null || !(tm instanceof CallbackPreferringPlatformTransactionManager)) {
-			// Standard transaction demarcation with getTransaction and commit/rollback calls.
-			TransactionInfo txInfo = createTransactionIfNecessary(tm, txAttr, joinpointIdentification);
-			Object retVal = null;
-			try {
-				// This is an around advice: Invoke the next interceptor in the chain.
-				// This will normally result in a target object being invoked.
-				retVal = invocation.proceed();
-			}
-			catch (Throwable ex) {
-				// target invocation exception
-				completeTransactionAfterThrowing(txInfo, ex);
-				throw ex;
-			}
-			finally {
-				cleanupTransactionInfo(txInfo);
-				ShardUtils.clean();
-			}
-			commitTransactionAfterReturning(txInfo);
-			return retVal;
+		try {
+			ShardUtils.compute(invocation);
+			return super.invoke(invocation);
+		} catch (Exception e) {
+			throw e;
+		}finally{
+			ShardUtils.clean();
 		}
-
-		else {
-			// It's a CallbackPreferringPlatformTransactionManager: pass a TransactionCallback in.
-			try {
-				Object result = ((CallbackPreferringPlatformTransactionManager) tm).execute(txAttr,
-						new TransactionCallback<Object>() {
-							public Object doInTransaction(TransactionStatus status) {
-								TransactionInfo txInfo = prepareTransactionInfo(tm, txAttr, joinpointIdentification, status);
-								try {
-									return invocation.proceed();
-								}
-								catch (Throwable ex) {
-									if (txAttr.rollbackOn(ex)) {
-										// A RuntimeException: will lead to a rollback.
-										if (ex instanceof RuntimeException) {
-											throw (RuntimeException) ex;
-										}
-										else {
-											throw new ThrowableHolderException(ex);
-										}
-									}
-									else {
-										// A normal return value: will lead to a commit.
-										return new ThrowableHolder(ex);
-									}
-								}
-								finally {
-									cleanupTransactionInfo(txInfo);
-								}
-							}
-						});
-
-				// Check result: It might indicate a Throwable to rethrow.
-				if (result instanceof ThrowableHolder) {
-					throw ((ThrowableHolder) result).getThrowable();
-				}
-				else {
-					return result;
-				}
-			}
-			catch (ThrowableHolderException ex) {
-				throw ex.getCause();
-			}finally{
-				ShardUtils.clean();
-			}
-		}
-	}
-
-
-	//---------------------------------------------------------------------
-	// Serialization support
-	//---------------------------------------------------------------------
-
-	private void writeObject(ObjectOutputStream oos) throws IOException {
-		// Rely on default serialization, although this class itself doesn't carry state anyway...
-		oos.defaultWriteObject();
-
-		// Deserialize superclass fields.
-		oos.writeObject(getTransactionManagerBeanName());
-		oos.writeObject(getTransactionManager());
-		oos.writeObject(getTransactionAttributeSource());
-		oos.writeObject(getBeanFactory());
-	}
-
-	private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
-		// Rely on default serialization, although this class itself doesn't carry state anyway...
-		ois.defaultReadObject();
-
-		// Serialize all relevant superclass fields.
-		// Superclass can't implement Serializable because it also serves as base class
-		// for AspectJ aspects (which are not allowed to implement Serializable)!
-		setTransactionManagerBeanName((String) ois.readObject());
-		setTransactionManager((PlatformTransactionManager) ois.readObject());
-		setTransactionAttributeSource((TransactionAttributeSource) ois.readObject());
-		setBeanFactory((BeanFactory) ois.readObject());
-	}
-
-
-	/**
-	 * Internal holder class for a Throwable, used as a return value
-	 * from a TransactionCallback (to be subsequently unwrapped again).
-	 */
-	private static class ThrowableHolder {
-
-		private final Throwable throwable;
-
-		public ThrowableHolder(Throwable throwable) {
-			this.throwable = throwable;
-		}
-
-		public final Throwable getThrowable() {
-			return this.throwable;
-		}
-	}
-
-
-	/**
-	 * Internal holder class for a Throwable, used as a RuntimeException to be
-	 * thrown from a TransactionCallback (and subsequently unwrapped again).
-	 */
-	private static class ThrowableHolderException extends RuntimeException {
-
-		public ThrowableHolderException(Throwable throwable) {
-			super(throwable);
-		}
-
-		@Override
-		public String toString() {
-			return getCause().toString();
-		}
+		
 	}
 
 }

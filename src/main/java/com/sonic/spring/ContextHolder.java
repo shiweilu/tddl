@@ -1,5 +1,9 @@
 package com.sonic.spring;
-
+/**
+ * 
+ * @author shiweilu
+ *
+ */
 public class ContextHolder {
 	private static ThreadLocal<String> dataSourceKeys = new ThreadLocal<String>();
 	private static ThreadLocal<Integer> tableSuffixs = new ThreadLocal<Integer>();

@@ -48,17 +48,9 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * {@code FactoryBean} that creates an MyBatis {@code SqlSessionFactory}.
- * This is the usual way to set up a shared MyBatis {@code SqlSessionFactory} in a Spring application context;
- * the SqlSessionFactory can then be passed to MyBatis-based DAOs via dependency injection.
+ * 
+ * @author shiweilu
  *
- * Either {@code DataSourceTransactionManager} or {@code JtaTransactionManager} can be used for transaction
- * demarcation in combination with a {@code SqlSessionFactory}. JTA should be used for transactions
- * which span multiple databases or when container managed transactions (CMT) are being used.
- *
- * @see #setConfigLocation
- * @see #setDataSource
- * @version $Id: SqlSessionFactoryBean.java 3919 2011-09-16 16:19:52Z eduardo.macarron $
  */
 public class SqlSessionFactoryBean implements FactoryBean<SqlSessionFactory>, InitializingBean, ApplicationListener<ApplicationEvent> {
 

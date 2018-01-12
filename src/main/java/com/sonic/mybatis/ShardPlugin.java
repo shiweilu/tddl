@@ -1,6 +1,7 @@
 package com.sonic.mybatis;
 
 import java.sql.Connection;
+
 import java.util.Properties;
 
 import org.apache.ibatis.executor.statement.StatementHandler;
@@ -13,6 +14,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sonic.common.ReflectionUtils;
+/**
+ * 
+ * @author shiweilu
+ *
+ */
 @Intercepts({ @Signature(type = StatementHandler.class, method = "prepare", args = { Connection.class }) })
 public class ShardPlugin implements Interceptor{
 	private SqlConverter sqlConverter;

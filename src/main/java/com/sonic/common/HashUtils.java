@@ -1,7 +1,11 @@
 package com.sonic.common;
 
 import java.util.List;
-
+/**
+ * 
+ * @author shiweilu
+ *
+ */
 public class HashUtils {
 	public static int getHashCode(List<Object> list){
 		if(list == null || list.size() == 0){

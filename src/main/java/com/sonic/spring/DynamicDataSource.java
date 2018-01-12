@@ -2,25 +2,27 @@ package com.sonic.spring;
 
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-import javax.annotation.PostConstruct;
-
-import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
+import javax.sql.DataSource;
 
 import com.sonic.common.Constants;
-
+/**
+ * 
+ * @author shiweilu
+ *
+ */
 public class DynamicDataSource extends AbstractRoutingDataSource {
-	private List<Object> writeDataSources;
-	private List<Object> readDataSources;
+	private List<DataSource> writeDataSources;
+	private List<DataSource> readDataSources;
 	private List<String> wdbkeys = new ArrayList<String>(); 
 	private List<String> rdbkeys = new ArrayList<String>(); 
-	public void setReadDataSources(List<Object> dataSources) {
+	private ConcurrentHashMap<String, DataSource> map = new ConcurrentHashMap<String, DataSource>();
+	public void setReadDataSources(List<DataSource> dataSources) {
 		this.readDataSources = dataSources;
-		Map<Object, Object> map = new HashMap<Object, Object>();
+		map.clear();
 		for(int i=0;readDataSources != null && i<readDataSources.size();i++){
 			map.put(Constants.RDATASOURCEKEYPREFIX+i, readDataSources.get(i));
 			rdbkeys.add(Constants.RDATASOURCEKEYPREFIX+i);
@@ -35,9 +37,9 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 		this.setTargetDataSources(map);
 	}
 
-	public void setWriteDataSources(List<Object> dataSources) {
+	public void setWriteDataSources(List<DataSource> dataSources) {
 		this.writeDataSources = dataSources;
-		Map<Object, Object> map = new HashMap<Object, Object>();
+		map.clear();
 		for(int i=0;writeDataSources != null && i<writeDataSources.size();i++){
 			map.put(Constants.WDATASOURCEKEYPREFIX+i, writeDataSources.get(i));
 			wdbkeys.add(Constants.WDATASOURCEKEYPREFIX+i);

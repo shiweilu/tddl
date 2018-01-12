@@ -3,7 +3,11 @@ package com.sonic.base;
 import java.util.List;
 
 import com.sonic.common.HashUtils;
-
+/**
+ * 
+ * @author shiweilu
+ *
+ */
 public class ShardStratetyImpl implements ShardStratety{
 	
 	private int tableNums;

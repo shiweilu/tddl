@@ -3,7 +3,11 @@ package com.sonic.base;
 import java.util.List;
 
 import com.sonic.spring.DynamicDataSource;
-
+/**
+ * 
+ * @author shiweilu
+ *
+ */
 public class DbRouterImpl{
 	
 	private static DynamicDataSource dynamicDataSource;

@@ -1,6 +1,10 @@
 package com.sonic.common;
 
-
+/**
+ * 
+ * @author shiweilu
+ *
+ */
 public class Constants {
 	public final static String WDATASOURCEKEYPREFIX = "wdb_";
 	
