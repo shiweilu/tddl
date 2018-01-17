@@ -78,8 +78,13 @@
 		<property name="releaseHelperThreads" value="8" />
 		<property name="connectionTestStatement" value="select 1 from dual" />
 	</bean>
+	<bean id="dataSourceConfig" class="com.sonic.base.DataSourceConfigImpl">
+		<constructor-arg name="writeKey" value="Owl.db.test.write" />
+		<constructor-arg name="readKey" value="Owl.db.test.write" />
+	</bean>
 	<bean id="dynamicDataSource" class="com.sonic.spring.DynamicDataSource">
-		<property name="writeDataSources">
+		<constructor-arg name="dataSourceConfig" ref="dataSourceConfig" />
+		<!-- <property name="writeDataSources">
 			<list>
 				 <ref bean="dataSource1" />
 				 <ref bean="dataSource2" />
@@ -90,10 +95,10 @@
 				 <ref bean="dataSource3" />
 				 <ref bean="dataSource4" />
 			</list>
-		</property>
+		</property> -->
 	</bean>
 	<bean id="demoSqlSessionFactory"
-		class="com.sonic.mybatis.SqlSessionFactoryBean">
+		class="org.mybatis.spring.SqlSessionFactoryBean">
 		<property name="dataSource" ref="dynamicDataSource" />
 		<property name="mapperLocations">
 			<array>

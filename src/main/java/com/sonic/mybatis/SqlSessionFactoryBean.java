@@ -350,7 +350,7 @@ public class SqlSessionFactoryBean implements FactoryBean<SqlSessionFactory>, In
         }
 
         if (this.transactionFactory == null) {
-            this.transactionFactory = new SpringManagedTransactionFactory(this.dataSource);
+            //this.transactionFactory = new SpringManagedTransactionFactory(this.dataSource);
         }
 
         Environment environment = new Environment(this.environment, this.transactionFactory, this.dataSource);

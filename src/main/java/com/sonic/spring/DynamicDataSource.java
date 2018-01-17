@@ -4,22 +4,42 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 import javax.sql.DataSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.sonic.base.DataSourceConfig;
+import com.sonic.base.DataSourceFactory;
+import com.sonic.base.DataSourceFactoryImpl;
 import com.sonic.common.Constants;
 /**
  * 
  * @author shiweilu
  *
  */
-public class DynamicDataSource extends AbstractRoutingDataSource {
+public class DynamicDataSource extends org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource {
+	private static final Logger logger = LoggerFactory.getLogger(DynamicDataSource.class);
 	private List<DataSource> writeDataSources;
 	private List<DataSource> readDataSources;
 	private List<String> wdbkeys = new ArrayList<String>(); 
 	private List<String> rdbkeys = new ArrayList<String>(); 
-	private ConcurrentHashMap<String, DataSource> map = new ConcurrentHashMap<String, DataSource>();
+	private DataSourceFactory dataSourceFactory = new DataSourceFactoryImpl();
+	private DataSourceConfig dataSourceConfig;
+	private ConcurrentHashMap<Object, Object> map = new ConcurrentHashMap<Object, Object>();
+	
+	public DynamicDataSource(DataSourceConfig dataSourceConfig){
+		try {
+			this.dataSourceConfig = dataSourceConfig;
+			initFromConfig(dataSourceConfig);
+		} catch (Exception e) {
+			logger.error("获取数据源配置信息出错：", e);
+		}
+	}
+	public DynamicDataSource(){
+		
+	}
 	public void setReadDataSources(List<DataSource> dataSources) {
 		this.readDataSources = dataSources;
 		map.clear();
@@ -34,6 +54,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 				wdbkeys.add(Constants.WDATASOURCEKEYPREFIX+i);
 			}
 		}
+		this.setDefaultTargetDataSource(readDataSources.get(0));
 		this.setTargetDataSources(map);
 	}
 
@@ -51,12 +72,20 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 				rdbkeys.add(Constants.RDATASOURCEKEYPREFIX+i);
 			}
 		}
+		this.setDefaultTargetDataSource(writeDataSources.get(0));
 		this.setTargetDataSources(map);
 	}
-	public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-		return null;
-	}
 
+	public void initFromConfig(DataSourceConfig dataSourceConfig){
+		List<DataSource> dataSources = dataSourceFactory.initWriteDataSources(dataSourceConfig.getWriteDataSourceConfig());
+		if(dataSources != null && dataSources.size()>0){
+			this.setWriteDataSources(dataSources);
+		}
+		dataSources = dataSourceFactory.initReadDataSources(dataSourceConfig.getReadDataSourceConfig());
+		if(dataSources != null && dataSources.size()>0){
+			this.setReadDataSources(dataSources);
+		}
+	}
 	@Override
 	protected Object determineCurrentLookupKey() {
 		return ContextHolder.getDataSourceKey();
@@ -68,5 +97,6 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 	public List<String> getWriteDbKeys(){
 		return this.wdbkeys;
 	}
+
 
 }
